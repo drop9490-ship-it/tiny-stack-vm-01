@@ -1,50 +1,61 @@
 import f from"node:fs";
-const{MAKEFUN_INPUT_DIR:I="/input",MAKEFUN_OUTPUT_DIR:O="/output"}=process.env;
-f.readdirSync(I).forEach(d=>{
- const a=I+"/"+d,b=O+"/"+d,r=R(f.readFileSync(a+"/program.bin"),f.readFileSync(a+"/input.bin"));
- f.mkdirSync(b,{recursive:!0});
- f.writeFileSync(b+"/stdout.bin",r[0]);
- f.writeFileSync(b+"/exit.txt",""+r[1]);
-});
-function R(g,q){
- const D=new Int32Array(512),C=[];
- let s=0,i=0,n=g.length,k=0,t=0,o="";
- const P=()=>D[--s]??T(2),U=v=>s>255?T(3):D[s++]=v,T=x=>{throw x};
- try{for(;;){
-  const y=g[k],m=+"014"[y]||(y>47&&y<52?2:0);
-  if(k+m>=n|k>>>0>=n)T(9);
-  k+=1+m;
-  if(y<8){
-   if(!y)T(0);
-   else if(y==1)U(g.readInt8(k-1));
-   else if(y==2)U(g.readInt32LE(k-4));
-   else if(y==3)P();
-   else if(y==4)U(D[s-1]??T(2));
-   else if(y==5){const b=P(),a=P();U(b);U(a)}
-   else if(y==6)U(D[s-2]??T(2));
-   else{const c=P(),b=P(),a=P();U(b);U(c);U(a)}
-  }else if(y>15&&y<35&&y!=31){
-   if(y==23)U(-P());
-   else if(y==27)U(~P());
-   else{const b=P(),a=P(),A=a>>>0,B=b>>>0;let r;
-    if(y<19)r=y-16?y-17?Math.imul(a,b):a-b:a+b;
-    else if(y<23){if(!b)T(4);r=y-19?y-20?y-21?A%B:A/B:a%b:a/b}
-    else if(y<27)r=y-24?y-25?a^b:a|b:a&b;
-    else if(y<31)r=y-28?y-29?a>>>b:a>>b:a<<b;
-    else r=+(y-32?y-33?A<B:a<b:a==b);
-    U(r)}
-  }else if(y>47&&y<51){
-   const r=g.readInt16LE(k-2),v=y==48?0:P();
-   if(y==48||y==49?!v:v)k+=r
-  }else if(y==51){if(C.length==64)T(7);C.push(k);k=g[k-2]|g[k-1]<<8}
-  else if(y==52)k=C.pop()??T(8);
-  else if(y==64){const a=P();U(a>>>0>255?T(6):D[256+a])}
-  else if(y==65){const a=P(),v=P();a>>>0>255?T(6):D[256+a]=v}
-  else if(y==80){const s=""+P();o.length+s.length>65536?T(11):o+=s}
-  else if(y==81){const v=P();o.length>65535?T(11):o+=String.fromCharCode(v&255)}
-  else if(y==82)U(q[i++]??-1);
-  else if(y==83)T(P()&255);
-  else T(5);
-  ++t==1e6&&T(10);
- }}catch(x){return[Buffer.from(o,"latin1"),x]}
+let E=process.env,I=E.MAKEFUN_INPUT_DIR||"/input",O=E.MAKEFUN_OUTPUT_DIR||"/output";
+let K="!\"#$%&'(123456789:;<=>?ABCQRSTUabqrst",V="!2R%'+,0*******&***&******AEEA!&)%%\"%";
+let R=(p,i)=>{
+let D=[],C=[],M=new Int32Array(256),o="",s=0,c=0,q=0,t=0,g=0;
+let d=x=>[Buffer.from(o,"latin1"),x];
+for(;;){
+if(t==1e6||q<0||q>=p.length)return d(t==1e6?10:9);
+let b=p[q],k=K.indexOf(String.fromCharCode(b+33));
+if(k<0)return d(5);
+let v=V.charCodeAt(k)-33,m=[0,1,2,4][v>>4],po=v>>2&3,pu=v&3;
+if(q+m>=p.length)return d(9);
+t++;
+let x=q+1+m;
+if(s<po||s-po+pu>256)return d(s<po?2:3);
+q=x;
+switch(b){
+case 0:return d(0);
+case 1:D[s++]=p.readInt8(x-1);break;
+case 2:D[s++]=p.readInt32LE(x-4);break;
+case 3:s--;break;
+case 4:case 6:D[s]=D[s-(b==4?1:2)];s++;break;
+case 5:[D[s-1],D[s-2]]=[D[s-2],D[s-1]];break;
+case 7:[D[s-3],D[s-2],D[s-1]]=[D[s-2],D[s-1],D[s-3]];break;
+case 23:case 27:D[s-1]=b==23?-D[s-1]|0:~D[s-1];break;
+case 48:case 49:case 50:if(b==48||(b==49)==!D[--s])q=x+p.readInt16LE(x-2);break;
+case 51:
+if(c==64)return d(7);
+C[c++]=x;q=p[x-2]|p[x-1]<<8;break;
+case 52:
+if(!c)return d(8);
+q=C[--c];break;
+case 64:case 65:{let a=D[s-1];if((a>>>0)>255)return d(6);if(b==64)D[s-1]=M[a];else{s-=2;M[a]=D[s]}break}
+case 80:{let v=String(D[--s]);if(o.length+v.length>65536)return d(11);o+=v;break}
+case 81:
+if(o.length>65535)return d(11);
+o+=String.fromCharCode(D[--s]&255);break;
+case 82:D[s++]=g<i.length?i[g++]:-1;break;
+case 83:return d(D[--s]&255);
+default:{
+let y=D[s-1],a=D[s-2],r;
+if(b<19)r=b==18?Math.imul(a,y):a+(b==16?y:-y)|0;
+else if(b<21){if(!y)return d(4);r=b==19?a==-2147483648&&y==-1?a:a/y|0:y==-1?0:a%y|0}
+else if(b<23){if(!y)return d(4);r=b==21?Math.floor((a>>>0)/(y>>>0))|0:(a>>>0)%(y>>>0)|0}
+else if(b>27&&b<31)r=[a<<(y&31),a>>(y&31),a>>>(y&31)|0][b-28];
+else if(b>31)r=b==32?a==y?1:0:b==33?a<y?1:0:(a>>>0)<(y>>>0)?1:0;
+else r=[a&y,a|y,a^y][b-24];
+s-=2;D[s++]=r;break}
+}
+}
+};
+for(let id of f.readdirSync(I)){
+let J;
+try{J=f.readFileSync(I+"/"+id+"/program.bin")}catch{continue}
+let N;
+try{N=f.readFileSync(I+"/"+id+"/input.bin")}catch{N=[]}
+let [W,e]=R(J,N),Y=O+"/"+id;
+f.mkdirSync(Y,{recursive:true});
+f.writeFileSync(Y+"/stdout.bin",W);
+f.writeFileSync(Y+"/exit.txt",e+"");
 }
