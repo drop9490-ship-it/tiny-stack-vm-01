@@ -5,7 +5,7 @@ let R=(p,i)=>{
 let D=[],C=[],M=new Int32Array(256),o="",s=0,c=0,q=0,t=0,g=0;
 let d=x=>[Buffer.from(o,"latin1"),x];
 for(;;){
-if(t==1e6||q<0||q>=p.length)return d(t==1e6?10:9);
+if(t==1e6||(q>>>0)>=p.length)return d(t==1e6?10:9);
 let b=p[q],k=K.indexOf(String.fromCharCode(b+33));
 if(k<0)return d(5);
 let v=V.charCodeAt(k)-33,m=[0,1,2,4][v>>4],po=v>>2&3,pu=v&3;
@@ -16,8 +16,7 @@ if(s<po||s-po+pu>256)return d(s<po?2:3);
 q=x;
 switch(b){
 case 0:return d(0);
-case 1:D[s++]=p.readInt8(x-1);break;
-case 2:D[s++]=p.readInt32LE(x-4);break;
+case 1:case 2:D[s++]=b==1?p.readInt8(x-1):p.readInt32LE(x-4);break;
 case 3:s--;break;
 case 4:case 6:D[s]=D[s-(b==4?1:2)];s++;break;
 case 5:[D[s-1],D[s-2]]=[D[s-2],D[s-1]];break;
@@ -30,8 +29,8 @@ C[c++]=x;q=p[x-2]|p[x-1]<<8;break;
 case 52:
 if(!c)return d(8);
 q=C[--c];break;
-case 64:case 65:{let a=D[s-1];if((a>>>0)>255)return d(6);if(b==64)D[s-1]=M[a];else{s-=2;M[a]=D[s]}break}
-case 80:{let v=String(D[--s]);if(o.length+v.length>65536)return d(11);o+=v;break}
+case 64:case 65:let a=D[s-1];if((a>>>0)>255)return d(6);b==64?D[s-1]=M[a]:(s-=2,M[a]=D[s]);break;
+case 80:let v=String(D[--s]);if(o.length+v.length>65536)return d(11);o+=v;break;
 case 81:
 if(o.length>65535)return d(11);
 o+=String.fromCharCode(D[--s]&255);break;
